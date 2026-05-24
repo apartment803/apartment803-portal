@@ -1,0 +1,101 @@
+'use client'
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+  const supabase = createClient()
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) { setError(error.message); setLoading(false); return }
+    const { data: profile } = await supabase
+      .from('users').select('role').eq('id', data.user.id).single()
+    router.push(profile?.role === 'admin' ? '/admin/clients' : '/dashboard/calls')
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex">
+      {/* Left panel — branding */}
+      <div className="hidden lg:flex w-96 bg-gray-50 border-r border-gray-100 flex-col justify-between p-10">
+        <div>
+          <div className="font-display text-2xl font-semibold text-gray-900 mb-1">
+            Apartment 803
+          </div>
+          <div className="text-sm text-gray-400">AI Voice Agent Portal</div>
+        </div>
+        <div className="space-y-6">
+          {[
+            { num: '24/7', label: 'AI call coverage' },
+            { num: '4', label: 'Agent types deployed' },
+            { num: '< 14d', label: 'Time to go live' },
+          ].map(({ num, label }) => (
+            <div key={label} className="flex items-center gap-4">
+              <div className="font-display text-3xl font-semibold text-gray-900 w-20">{num}</div>
+              <div className="text-sm text-gray-400">{label}</div>
+            </div>
+          ))}
+        </div>
+        <div className="text-xs text-gray-300">© 2026 Apartment 803</div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-sm animate-slide-up">
+          <div className="mb-8">
+            <div className="lg:hidden font-display text-2xl font-semibold text-gray-900 mb-6">
+              Apartment 803
+            </div>
+            <h1 className="text-xl font-semibold text-gray-900 mb-1">Welcome back</h1>
+            <p className="text-sm text-gray-400">Sign in to your portal</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="input-label">Email address</label>
+              <input
+                type="email"
+                className="input"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="input-label">Password</label>
+              <input
+                type="password"
+                className="input"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error && (
+              <div className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">
+                {error}
+              </div>
+            )}
+            <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5 mt-2">
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+
+          <p className="text-center text-xs text-gray-300 mt-8">
+            Secure portal · Apartment 803
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
