@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/shared/Sidebar'
-import { Clock, Phone, ChevronDown, Plus, AlertCircle } from 'lucide-react'
+import { Clock, Phone, Plus, AlertCircle, ArrowRight, X } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
 
 interface Lead {
@@ -19,13 +19,13 @@ interface Lead {
   created_at: string
 }
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  new:                    { label: 'New',                   bg: '#EFF6FF', color: '#2563EB' },
-  attempting_contact:     { label: 'Attempting Contact',    bg: '#FFF7ED', color: '#EA580C' },
-  contacted:              { label: 'Contacted',             bg: '#F0FDF4', color: '#16A34A' },
-  consultation_scheduled: { label: 'Consultation Scheduled',bg: '#F5F3FF', color: '#7C3AED' },
-  retained:               { label: 'Retained',              bg: '#F0FDF4', color: '#15803D' },
-  lost:                   { label: 'Lost',                  bg: '#FFF5F5', color: '#FF453A' },
+const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; next: string | null }> = {
+  new:                    { label: 'New',                    bg: '#EFF6FF', color: '#2563EB', next: 'attempting_contact' },
+  attempting_contact:     { label: 'Attempting Contact',     bg: '#FFF7ED', color: '#EA580C', next: 'contacted' },
+  contacted:              { label: 'Contacted',              bg: '#F0FDF4', color: '#16A34A', next: 'consultation_scheduled' },
+  consultation_scheduled: { label: 'Consultation Scheduled', bg: '#F5F3FF', color: '#7C3AED', next: 'retained' },
+  retained:               { label: 'Retained',               bg: '#F0FDF4', color: '#15803D', next: null },
+  lost:                   { label: 'Lost',                   bg: '#FFF5F5', color: '#FF453A', next: null },
 }
 
 const QUALITY_CONFIG: Record<string, { label: string; color: string }> = {
@@ -41,15 +41,6 @@ const LOST_REASONS = [
   'No budget',
   'Case too old',
   'Other',
-]
-
-const STATUS_ORDER = [
-  'new',
-  'attempting_contact',
-  'contacted',
-  'consultation_scheduled',
-  'retained',
-  'lost',
 ]
 
 function UrgencyTimer({ createdAt, status }: { createdAt: string; status: string }) {
@@ -80,51 +71,98 @@ function UrgencyTimer({ createdAt, status }: { createdAt: string; status: string
   )
 }
 
-function StatusDropdown({ lead, onUpdate }: { lead: Lead; onUpdate: (id: string, status: string, lostReason?: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [showLostReasons, setShowLostReasons] = useState(false)
+function StatusCell({
+  lead,
+  onAdvance,
+  onLost,
+  isMobile,
+}: {
+  lead: Lead
+  onAdvance: (id: string) => void
+  onLost: (lead: Lead) => void
+  isMobile: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
   const cfg = STATUS_CONFIG[lead.status]
+  const canAdvance = cfg.next !== null
+  const isTerminal = !canAdvance
 
   return (
-    <div style={{ position:'relative' }}>
-      <button
-        onClick={e => { e.stopPropagation(); setOpen(!open); setShowLostReasons(false) }}
-        style={{ display:'inline-flex', alignItems:'center', gap:5, background:cfg.bg, color:cfg.color, fontSize:10, fontWeight:500, padding:'4px 10px', borderRadius:20, border:'none', cursor:'pointer' }}
+    <div style={{ display:'flex', flexDirection:'column', gap:4, alignItems:'flex-start' }}>
+      {/* Status pill — click to advance */}
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        {cfg.label}
-        <ChevronDown size={10} />
-      </button>
-      {open && (
-        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, maxHeight:220, overflowY:'auto', background:'#FFFFFF', border:'0.5px solid #F0F0F0', borderRadius:10, boxShadow:'0 4px 16px rgba(0,0,0,0.08)', zIndex:100, minWidth:200, overflow:'hidden' }}>
-          {showLostReasons ? (
-            <>
-              <div style={{ padding:'8px 12px', fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'0.5px solid #F0F0F0' }}>Reason for loss</div>
-              {LOST_REASONS.map(r => (
-                <button key={r} onClick={e => { e.stopPropagation(); onUpdate(lead.id, 'lost', r); setOpen(false) }}
-                  style={{ display:'block', width:'100%', textAlign:'left', padding:'9px 12px', fontSize:12, color:'#1C1C1E', background:'none', border:'none', cursor:'pointer', borderBottom:'0.5px solid #F8F8F8' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='#F8F8F8'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='none'}
-                >{r}</button>
-              ))}
-            </>
-          ) : (
-            STATUS_ORDER.filter(s => s !== lead.status).map(s => (
-              <button key={s} onClick={e => {
-                e.stopPropagation()
-                if (s === 'lost') { setShowLostReasons(true); return }
-                onUpdate(lead.id, s)
-                setOpen(false)
-              }}
-                style={{ display:'block', width:'100%', textAlign:'left', padding:'9px 12px', fontSize:12, color:'#1C1C1E', background:'none', border:'none', cursor:'pointer', borderBottom:'0.5px solid #F8F8F8' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='#F8F8F8'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='none'}
-              >
-                <span style={{ color: STATUS_CONFIG[s].color }}>{STATUS_CONFIG[s].label}</span>
-              </button>
-            ))
-          )}
-        </div>
+        <button
+          onClick={e => { e.stopPropagation(); if (canAdvance) onAdvance(lead.id) }}
+          style={{
+            display:'inline-flex', alignItems:'center', gap:5,
+            background: cfg.bg, color: cfg.color,
+            fontSize:10, fontWeight:500, padding:'4px 10px',
+            borderRadius:20, border:'none',
+            cursor: canAdvance ? 'pointer' : 'default',
+            transition:'opacity 0.15s',
+            opacity: hovered && canAdvance ? 0.8 : 1,
+          }}
+        >
+          {cfg.label}
+          {canAdvance && <ArrowRight size={9} />}
+        </button>
+
+        {/* Desktop: Lost button appears on hover, hidden when already lost or retained */}
+        {!isMobile && !isTerminal && hovered && (
+          <button
+            onClick={e => { e.stopPropagation(); onLost(lead) }}
+            style={{ display:'inline-flex', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', color:'#AEAEB2', fontSize:10, padding:'2px 4px', borderRadius:6 }}
+          >
+            <X size={9} />
+            Lost
+          </button>
+        )}
+      </div>
+
+      {/* Mobile: Lost button always visible below pill */}
+      {isMobile && !isTerminal && (
+        <button
+          onClick={e => { e.stopPropagation(); onLost(lead) }}
+          style={{ display:'inline-flex', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', color:'#AEAEB2', fontSize:10, padding:0 }}
+        >
+          <X size={9} />
+          Mark as lost
+        </button>
       )}
+    </div>
+  )
+}
+
+function LostModal({ lead, onClose, onConfirm }: { lead: Lead; onClose: () => void; onConfirm: (id: string, reason: string) => void }) {
+  const [reason, setReason] = useState('')
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={onClose}>
+      <div style={{ background:'#FFFFFF', borderRadius:16, padding:'24px', width:360, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize:15, fontWeight:500, color:'#1C1C1E', marginBottom:4 }}>Mark as Lost</div>
+        <div style={{ fontSize:12, color:'#AEAEB2', marginBottom:18 }}>
+          {lead.caller_name || lead.caller_number} — {lead.incident_type || 'Unknown incident'}
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:20 }}>
+          {LOST_REASONS.map(r => (
+            <button key={r} onClick={() => setReason(r)}
+              style={{ textAlign:'left', padding:'10px 14px', borderRadius:10, border:`0.5px solid ${reason === r ? '#1C1C1E' : '#F0F0F0'}`, background: reason === r ? '#F8F8F8' : '#FFFFFF', fontSize:13, color: reason === r ? '#1C1C1E' : '#AEAEB2', cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif' }}>
+              {r}
+            </button>
+          ))}
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={onClose} style={{ flex:1, padding:'10px', borderRadius:10, border:'0.5px solid #F0F0F0', background:'#F8F8F8', fontSize:13, color:'#AEAEB2', cursor:'pointer' }}>Cancel</button>
+          <button onClick={() => { if (reason) { onConfirm(lead.id, reason); onClose() } }}
+            disabled={!reason}
+            style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background:'#1C1C1E', fontSize:13, color:'#FFFFFF', cursor: reason ? 'pointer' : 'not-allowed', opacity: reason ? 1 : 0.4 }}>
+            Confirm
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -151,7 +189,7 @@ function AddLeadModal({ clientId, onClose, onAdd }: { clientId: string; onClose:
   }
 
   const field: React.CSSProperties = { width:'100%', background:'#F8F8F8', border:'0.5px solid #F0F0F0', borderRadius:8, padding:'9px 12px', fontSize:13, color:'#1C1C1E', outline:'none', fontFamily:'Inter, system-ui, sans-serif', boxSizing:'border-box' }
-  const label: React.CSSProperties = { fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:5, display:'block' }
+  const labelStyle: React.CSSProperties = { fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:5, display:'block' }
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={onClose}>
@@ -159,15 +197,15 @@ function AddLeadModal({ clientId, onClose, onAdd }: { clientId: string; onClose:
         <div style={{ fontSize:15, fontWeight:500, color:'#1C1C1E', marginBottom:18 }}>Add Lead Manually</div>
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           <div>
-            <span style={label}>Phone Number *</span>
+            <span style={labelStyle}>Phone Number *</span>
             <input style={field} placeholder="+1 305 000 0000" value={form.caller_number} onChange={e => setForm(f => ({ ...f, caller_number: e.target.value }))} />
           </div>
           <div>
-            <span style={label}>Name (optional)</span>
+            <span style={labelStyle}>Name (optional)</span>
             <input style={field} placeholder="Caller's name" value={form.caller_name} onChange={e => setForm(f => ({ ...f, caller_name: e.target.value }))} />
           </div>
           <div>
-            <span style={label}>Incident Type</span>
+            <span style={labelStyle}>Incident Type</span>
             <select style={field} value={form.incident_type} onChange={e => setForm(f => ({ ...f, incident_type: e.target.value }))}>
               <option value="">Select type</option>
               <option value="Auto Accident">Auto Accident</option>
@@ -177,7 +215,7 @@ function AddLeadModal({ clientId, onClose, onAdd }: { clientId: string; onClose:
             </select>
           </div>
           <div>
-            <span style={label}>Lead Quality</span>
+            <span style={labelStyle}>Lead Quality</span>
             <select style={field} value={form.lead_quality} onChange={e => setForm(f => ({ ...f, lead_quality: e.target.value }))}>
               <option value="strong">Strong</option>
               <option value="moderate">Moderate</option>
@@ -202,10 +240,19 @@ export default function PipelinePage() {
   const [clientName, setClientName] = useState('Your Business')
   const [ready, setReady] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [lostModalLead, setLostModalLead] = useState<Lead | null>(null)
   const [filter, setFilter] = useState<string>('active')
+  const [isMobile, setIsMobile] = useState(false)
   const supabase = createClient()
 
-  const load = async () => {
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const load = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { window.location.href = '/'; return }
@@ -224,18 +271,26 @@ export default function PipelinePage() {
       }
     } catch(e) { console.error(e) }
     finally { setReady(true) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const advanceStatus = async (id: string) => {
+    const lead = leads.find(l => l.id === id)
+    if (!lead) return
+    const next = STATUS_CONFIG[lead.status].next
+    if (!next) return
+    const update: any = { status: next }
+    if (next === 'contacted' || next === 'attempting_contact') {
+      update.last_contacted_at = new Date().toISOString()
+      update.contact_attempts = (lead.contact_attempts || 0) + 1
+    }
+    await supabase.from('leads').update(update).eq('id', id)
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, ...update } : l))
   }
 
-  useEffect(() => { load() }, [])
-
-  const updateStatus = async (id: string, status: string, lostReason?: string) => {
-    const update: any = { status }
-    if (lostReason) update.lost_reason = lostReason
-    if (status === 'contacted' || status === 'attempting_contact') {
-      update.last_contacted_at = new Date().toISOString()
-      const lead = leads.find(l => l.id === id)
-      if (lead) update.contact_attempts = (lead.contact_attempts || 0) + 1
-    }
+  const markLost = async (id: string, reason: string) => {
+    const update = { status: 'lost', lost_reason: reason }
     await supabase.from('leads').update(update).eq('id', id)
     setLeads(prev => prev.map(l => l.id === id ? { ...l, ...update } : l))
   }
@@ -254,9 +309,7 @@ export default function PipelinePage() {
   const sortedLeads = [...displayLeads].sort((a, b) => {
     if (a.status === 'new' && b.status !== 'new') return -1
     if (b.status === 'new' && a.status !== 'new') return 1
-    const aElapsed = Date.now() - new Date(a.created_at).getTime()
-    const bElapsed = Date.now() - new Date(b.created_at).getTime()
-    return bElapsed - aElapsed
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   })
 
   const card: React.CSSProperties = { background:'#F8F8F8', borderRadius:14, padding:'16px 16px 14px' }
@@ -296,10 +349,10 @@ export default function PipelinePage() {
           {/* Metrics */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
             {[
-              { label:'New Leads',        val: newLeads.length,      sub:'need follow-up' },
-              { label:'Active Pipeline',  val: activeLeads.length,   sub:'in progress' },
-              { label:'Retained',         val: retainedLeads.length, sub:'this month' },
-              { label:'Lost',             val: lostLeads.length,     sub:leads.length ? Math.round((lostLeads.length/leads.length)*100)+'% loss rate' : '0% loss rate' },
+              { label:'New Leads',       val: newLeads.length,      sub:'need follow-up' },
+              { label:'Active Pipeline', val: activeLeads.length,   sub:'in progress' },
+              { label:'Retained',        val: retainedLeads.length, sub:'this month' },
+              { label:'Lost',            val: lostLeads.length,     sub: leads.length ? Math.round((lostLeads.length/leads.length)*100)+'% loss rate' : '0% loss rate' },
             ].map(({ label, val, sub }) => (
               <div key={label} style={card}>
                 <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
@@ -312,10 +365,10 @@ export default function PipelinePage() {
           {/* Filter tabs */}
           <div style={{ display:'flex', gap:4, marginBottom:16 }}>
             {[
-              { key:'active', label:'Active' },
+              { key:'active',   label:'Active' },
               { key:'retained', label:'Retained' },
-              { key:'lost', label:'Lost' },
-              { key:'all', label:'All' },
+              { key:'lost',     label:'Lost' },
+              { key:'all',      label:'All' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)}
                 style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight: filter===key ? 500 : 400, color: filter===key ? '#1C1C1E' : '#AEAEB2', background: filter===key ? '#F8F8F8' : 'transparent', border: filter===key ? '0.5px solid #E5E5E5' : '0.5px solid transparent', cursor:'pointer' }}>
@@ -325,18 +378,18 @@ export default function PipelinePage() {
           </div>
 
           {/* Table */}
-          <div style={{ background:'#F8F8F8', borderRadius:14, overflow:'hidden' }}>
+          <div style={{ background:'#F8F8F8', borderRadius:14, overflow:'visible' }}>
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ borderBottom:'0.5px solid #EFEFEF' }}>
-                  {['Caller','Incident','Quality','Status','Attempts','Received',''].map(h => (
+                  {['Caller','Incident','Quality','Status','Attempts','Received'].map(h => (
                     <th key={h} style={{ fontSize:10, fontWeight:500, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', textAlign:'left', padding:'10px 14px' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {sortedLeads.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign:'center', padding:'60px 20px', color:'#AEAEB2', fontSize:13 }}>
+                  <tr><td colSpan={6} style={{ textAlign:'center', padding:'60px 20px', color:'#AEAEB2', fontSize:13 }}>
                     <Phone size={22} style={{ margin:'0 auto 12px', display:'block', color:'#E5E5E5' }} />
                     No leads yet. Sara will populate this automatically as calls come in.
                   </td></tr>
@@ -356,7 +409,12 @@ export default function PipelinePage() {
                       </span>
                     </td>
                     <td style={{ padding:'13px 14px' }}>
-                      <StatusDropdown lead={lead} onUpdate={updateStatus} />
+                      <StatusCell
+                        lead={lead}
+                        onAdvance={advanceStatus}
+                        onLost={setLostModalLead}
+                        isMobile={isMobile}
+                      />
                     </td>
                     <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2', fontFamily:'monospace' }}>
                       {lead.contact_attempts > 0 ? `${lead.contact_attempts}x` : '—'}
@@ -364,10 +422,8 @@ export default function PipelinePage() {
                     <td style={{ padding:'13px 14px' }}>
                       <div style={{ fontSize:11, color:'#AEAEB2' }}>{format(new Date(lead.created_at), 'MMM d, hh:mm a')}</div>
                       <div style={{ marginTop:4 }}><UrgencyTimer createdAt={lead.created_at} status={lead.status} /></div>
-                    </td>
-                    <td style={{ padding:'13px 14px' }}>
                       {lead.status === 'lost' && lead.lost_reason && (
-                        <span style={{ fontSize:10, color:'#AEAEB2' }}>{lead.lost_reason}</span>
+                        <div style={{ fontSize:10, color:'#AEAEB2', marginTop:4 }}>{lead.lost_reason}</div>
                       )}
                     </td>
                   </tr>
@@ -375,10 +431,15 @@ export default function PipelinePage() {
               </tbody>
             </table>
           </div>
+
         </div>
       </main>
+
       {showAddModal && clientId && (
         <AddLeadModal clientId={clientId} onClose={() => setShowAddModal(false)} onAdd={load} />
+      )}
+      {lostModalLead && (
+        <LostModal lead={lostModalLead} onClose={() => setLostModalLead(null)} onConfirm={markLost} />
       )}
     </div>
   )
