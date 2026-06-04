@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 interface CallLog {
   id: string; direction: string; caller_number: string; duration_seconds: number
   outcome: string; transcript: string; created_at: string; agent_name?: string
+  recording_url?: string | null
 }
 
 function formatDuration(s: number) {
@@ -110,7 +111,17 @@ export default function CallLogsTable({ calls, clientName }: { calls: CallLog[],
                   </td>
                   <td style={{ padding:'13px 14px' }}><OutcomeBadge outcome={call.outcome} /></td>
                   <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2' }}>{format(new Date(call.created_at), 'MMM d, yyyy, hh:mm a')}</td>
-                  <td style={{ padding:'13px 14px' }}>{call.transcript && <span style={{ color:'#AEAEB2' }}>{expanded===call.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}</span>}</td>
+                  <td style={{ padding:'13px 14px' }}>
+  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+    {call.recording_url && (
+      <audio controls src={call.recording_url}
+        style={{ height:28, width:160, accentColor:'#1C1C1E' }}
+        onClick={e => e.stopPropagation()}
+      />
+    )}
+    {call.transcript && <span style={{ color:'#AEAEB2' }}>{expanded===call.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}</span>}
+  </div>
+</td>
                 </tr>
                 {expanded===call.id && call.transcript && (
                   <tr key={call.id+'-tx'} style={{ borderBottom:'0.5px solid #EFEFEF' }}>
