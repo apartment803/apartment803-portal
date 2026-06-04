@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Phone, PhoneIncoming, PhoneOutgoing, Search, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { format } from 'date-fns'
 import AudioPlayer from '@/components/dashboard/AudioPlayer'
+
 interface CallLog {
   id: string; direction: string; caller_number: string; duration_seconds: number
   outcome: string; transcript: string; created_at: string; agent_name?: string
@@ -112,14 +113,11 @@ export default function CallLogsTable({ calls, clientName }: { calls: CallLog[],
                   <td style={{ padding:'13px 14px' }}><OutcomeBadge outcome={call.outcome} /></td>
                   <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2' }}>{format(new Date(call.created_at), 'MMM d, yyyy, hh:mm a')}</td>
                   <td style={{ padding:'13px 14px' }}>
-  <div style={{ display:'flex', alignItWhems:'center', gap:8 }}>
-    {call.recording_url && (
-      <AudioPlayer url={call.recording_url} />
-        }
-    )}
-    {call.transcript && <span style={{ color:'#AEAEB2' }}>{expanded===call.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}</span>}
-  </div>
-</td>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      {call.recording_url && <AudioPlayer url={call.recording_url} />}
+                      {call.transcript && <span style={{ color:'#AEAEB2' }}>{expanded===call.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}</span>}
+                    </div>
+                  </td>
                 </tr>
                 {expanded===call.id && call.transcript && (
                   <tr key={call.id+'-tx'} style={{ borderBottom:'0.5px solid #EFEFEF' }}>
