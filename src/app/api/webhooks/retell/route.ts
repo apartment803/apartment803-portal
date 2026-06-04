@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       duration_seconds: duration,
       outcome,
       transcript: call.transcript || extracted.call_summary || '',
+recording_url: call.recording_url || null,
       agent_name: 'Sarah — PI Intake',
       created_at: call.start_timestamp
         ? new Date(call.start_timestamp).toISOString()
