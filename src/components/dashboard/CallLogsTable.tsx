@@ -114,7 +114,7 @@ export default function CallLogsTable({ calls, clientName }: { calls: CallLog[],
                   <td style={{ padding:'13px 14px' }}>
   <div style={{ display:'flex', alignItWhems:'center', gap:8 }}>
     {call.recording_url && (
-      <<AudioPlayer url={call.recording_url} />Like this?
+      <AudioPlayer url={call.recording_url} />
         }
     )}
     {call.transcript && <span style={{ color:'#AEAEB2' }}>{expanded===call.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}</span>}
