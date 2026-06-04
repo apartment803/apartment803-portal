@@ -43,25 +43,27 @@ const LOST_REASONS = [
   'Other',
 ]
 
-function UrgencyTimer({ createdAt, status }: { createdAt: string; status: string }) {
+function UrgencyTimer({ createdAt, status, lastContactedAt }: { createdAt: string; status: string; lastContactedAt?: string | null }) {
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
-    if (status !== 'new') return
-    const update = () => setElapsed(Date.now() - new Date(createdAt).getTime())
+    if (status !== 'new' && status !== 'attempting_contact') return
+    const base = status === 'attempting_contact' && lastContactedAt ? lastContactedAt : createdAt
+    const update = () => setElapsed(Date.now() - new Date(base).getTime())
     update()
     const iv = setInterval(update, 60000)
     return () => clearInterval(iv)
-  }, [createdAt, status])
+  }, [createdAt, status, lastContactedAt])
 
-  if (status !== 'new') return null
+  if (status !== 'new' && status !== 'attempting_contact') return null
 
   const hours = elapsed / (1000 * 60 * 60)
   const color = hours < 1 ? '#16A34A' : hours < 24 ? '#EA580C' : '#FF453A'
   const bg = hours < 1 ? '#F0FDF4' : hours < 24 ? '#FFF7ED' : '#FFF5F5'
-  const label = elapsed < 60000 * 60
+  const timeLabel = elapsed < 60000 * 60
     ? `${Math.floor(elapsed / 60000)}m ago`
-    : formatDistanceToNow(new Date(createdAt), { addSuffix: true })
+    : formatDistanceToNow(new Date(status === 'attempting_contact' && lastContactedAt ? lastContactedAt : createdAt), { addSuffix: true })
+  const label = status === 'attempting_contact' ? `last attempt ${timeLabel}` : timeLabel
 
   return (
     <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:bg, color, fontSize:10, fontWeight:500, padding:'3px 8px', borderRadius:20, fontFamily:'monospace' }}>
@@ -392,7 +394,13 @@ export default function PipelinePage() {
                     </td>
                     <td style={{ padding:'13px 14px' }}>
                       <div style={{ fontSize:11, color:'#AEAEB2' }}>{format(new Date(lead.created_at), 'MMM d, hh:mm a')}</div>
-                      <div style={{ marginTop:4 }}><UrgencyTimer createdAt={lead.created_at} status={lead.status} /></div>
+                      <div style={{ marginTop:4 }}>
+                        <UrgencyTimer
+                          createdAt={lead.created_at}
+                          status={lead.status}
+                          lastContactedAt={lead.last_contacted_at}
+                        />
+                      </div>
                       {lead.status === 'lost' && lead.lost_reason && (
                         <div style={{ fontSize:10, color:'#AEAEB2', marginTop:4 }}>{lead.lost_reason}</div>
                       )}
