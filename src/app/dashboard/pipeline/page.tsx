@@ -290,7 +290,7 @@ export default function PipelinePage() {
   }
 
   const markLost = async (id: string, reason: string) => {
-    const update = { status: 'lost', lost_reason: reason }
+    const update = { status: 'lost' as const, lost_reason: reason }
     await supabase.from('leads').update(update).eq('id', id)
     setLeads(prev => prev.map(l => l.id === id ? { ...l, ...update } : l))
   }
