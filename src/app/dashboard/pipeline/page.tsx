@@ -74,65 +74,29 @@ function UrgencyTimer({ createdAt, status }: { createdAt: string; status: string
 function StatusCell({
   lead,
   onAdvance,
-  onLost,
   isMobile,
 }: {
   lead: Lead
   onAdvance: (id: string) => void
-  onLost: (lead: Lead) => void
   isMobile: boolean
 }) {
-  const [hovered, setHovered] = useState(false)
   const cfg = STATUS_CONFIG[lead.status]
   const canAdvance = cfg.next !== null
-  const isTerminal = !canAdvance
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:4, alignItems:'flex-start' }}>
-      {/* Status pill — click to advance */}
-      <div style={{ display:'flex', alignItems:'center', gap:6 }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <button
-          onClick={e => { e.stopPropagation(); if (canAdvance) onAdvance(lead.id) }}
-          style={{
-            display:'inline-flex', alignItems:'center', gap:5,
-            background: cfg.bg, color: cfg.color,
-            fontSize:10, fontWeight:500, padding:'4px 10px',
-            borderRadius:20, border:'none',
-            cursor: canAdvance ? 'pointer' : 'default',
-            transition:'opacity 0.15s',
-            opacity: hovered && canAdvance ? 0.8 : 1,
-          }}
-        >
-          {cfg.label}
-          {canAdvance && <ArrowRight size={9} />}
-        </button>
-
-        {/* Desktop: Lost button appears on hover, hidden when already lost or retained */}
-        {!isMobile && !isTerminal && hovered && (
-          <button
-            onClick={e => { e.stopPropagation(); onLost(lead) }}
-            style={{ display:'inline-flex', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', color:'#AEAEB2', fontSize:10, padding:'2px 4px', borderRadius:6 }}
-          >
-            <X size={9} />
-            Lost
-          </button>
-        )}
-      </div>
-
-      {/* Mobile: Lost button always visible below pill */}
-      {isMobile && !isTerminal && (
-        <button
-          onClick={e => { e.stopPropagation(); onLost(lead) }}
-          style={{ display:'inline-flex', alignItems:'center', gap:3, background:'none', border:'none', cursor:'pointer', color:'#AEAEB2', fontSize:10, padding:0 }}
-        >
-          <X size={9} />
-          Mark as lost
-        </button>
-      )}
-    </div>
+    <button
+      onClick={e => { e.stopPropagation(); if (canAdvance) onAdvance(lead.id) }}
+      style={{
+        display:'inline-flex', alignItems:'center', gap:5,
+        background: cfg.bg, color: cfg.color,
+        fontSize:10, fontWeight:500, padding:'4px 10px',
+        borderRadius:20, border:'none',
+        cursor: canAdvance ? 'pointer' : 'default',
+      }}
+    >
+      {cfg.label}
+      {canAdvance && <ArrowRight size={9} />}
+    </button>
   )
 }
 
@@ -382,22 +346,30 @@ export default function PipelinePage() {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ borderBottom:'0.5px solid #EFEFEF' }}>
-                  {['Caller','Incident','Quality','Status','Attempts','Received'].map(h => (
+                  {['Caller','Incident','Quality','Status','Attempts','Received',''].map(h => (
                     <th key={h} style={{ fontSize:10, fontWeight:500, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', textAlign:'left', padding:'10px 14px' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {sortedLeads.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign:'center', padding:'60px 20px', color:'#AEAEB2', fontSize:13 }}>
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:'60px 20px', color:'#AEAEB2', fontSize:13 }}>
                     <Phone size={22} style={{ margin:'0 auto 12px', display:'block', color:'#E5E5E5' }} />
                     No leads yet. Sara will populate this automatically as calls come in.
                   </td></tr>
                 ) : sortedLeads.map(lead => (
                   <tr key={lead.id}
                     style={{ borderBottom:'0.5px solid #EFEFEF' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='#FAFAFA'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='transparent'}>
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = '#FAFAFA'
+                      const btn = (e.currentTarget as HTMLElement).querySelector('.lost-btn') as HTMLElement
+                      if (btn) btn.style.opacity = '1'
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'transparent'
+                      const btn = (e.currentTarget as HTMLElement).querySelector('.lost-btn') as HTMLElement
+                      if (btn) btn.style.opacity = '0'
+                    }}>
                     <td style={{ padding:'13px 14px' }}>
                       <div style={{ fontSize:12, fontWeight:500, color:'#1C1C1E', fontFamily:'monospace' }}>{lead.caller_name || lead.caller_number}</div>
                       {lead.caller_name && <div style={{ fontSize:10, color:'#AEAEB2', marginTop:2, fontFamily:'monospace' }}>{lead.caller_number}</div>}
@@ -412,7 +384,6 @@ export default function PipelinePage() {
                       <StatusCell
                         lead={lead}
                         onAdvance={advanceStatus}
-                        onLost={setLostModalLead}
                         isMobile={isMobile}
                       />
                     </td>
@@ -424,6 +395,19 @@ export default function PipelinePage() {
                       <div style={{ marginTop:4 }}><UrgencyTimer createdAt={lead.created_at} status={lead.status} /></div>
                       {lead.status === 'lost' && lead.lost_reason && (
                         <div style={{ fontSize:10, color:'#AEAEB2', marginTop:4 }}>{lead.lost_reason}</div>
+                      )}
+                    </td>
+                    <td style={{ padding:'13px 14px', textAlign:'right' }}>
+                      {!['retained','lost'].includes(lead.status) && (
+                        <button
+                          className="lost-btn"
+                          onClick={e => { e.stopPropagation(); setLostModalLead(lead) }}
+                          style={{ opacity: isMobile ? 1 : 0, transition:'opacity 0.15s', display:'inline-flex', alignItems:'center', gap:4, background:'none', border:'0.5px solid #E5E5E5', borderRadius:20, padding:'3px 10px', fontSize:10, color:'#AEAEB2', cursor:'pointer' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#FF453A'; (e.currentTarget as HTMLElement).style.borderColor='#FF453A' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#AEAEB2'; (e.currentTarget as HTMLElement).style.borderColor='#E5E5E5' }}
+                        >
+                          <X size={9} /> Lost
+                        </button>
                       )}
                     </td>
                   </tr>
