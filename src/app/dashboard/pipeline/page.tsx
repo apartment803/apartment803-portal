@@ -95,7 +95,7 @@ function StatusDropdown({ lead, onUpdate }: { lead: Lead; onUpdate: (id: string,
         <ChevronDown size={10} />
       </button>
       {open && (
-        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:'#FFFFFF', border:'0.5px solid #F0F0F0', borderRadius:10, boxShadow:'0 4px 16px rgba(0,0,0,0.08)', zIndex:100, minWidth:200, overflow:'hidden' }}>
+        <div style={{ position:'absolute', bottom:'calc(100% + 4px)', left:0, background:'#FFFFFF', border:'0.5px solid #F0F0F0', borderRadius:10, boxShadow:'0 4px 16px rgba(0,0,0,0.08)', zIndex:100, minWidth:200, overflow:'hidden' }}>
           {showLostReasons ? (
             <>
               <div style={{ padding:'8px 12px', fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', borderBottom:'0.5px solid #F0F0F0' }}>Reason for loss</div>
