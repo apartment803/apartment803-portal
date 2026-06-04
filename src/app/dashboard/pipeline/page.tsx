@@ -73,28 +73,13 @@ function UrgencyTimer({ createdAt, status, lastContactedAt }: { createdAt: strin
   )
 }
 
-function StatusCell({
-  lead,
-  onAdvance,
-  isMobile,
-}: {
-  lead: Lead
-  onAdvance: (id: string) => void
-  isMobile: boolean
-}) {
+function StatusCell({ lead, onAdvance, isMobile }: { lead: Lead; onAdvance: (id: string) => void; isMobile: boolean }) {
   const cfg = STATUS_CONFIG[lead.status]
   const canAdvance = cfg.next !== null
-
   return (
     <button
       onClick={e => { e.stopPropagation(); if (canAdvance) onAdvance(lead.id) }}
-      style={{
-        display:'inline-flex', alignItems:'center', gap:5,
-        background: cfg.bg, color: cfg.color,
-        fontSize:10, fontWeight:500, padding:'4px 10px',
-        borderRadius:20, border:'none',
-        cursor: canAdvance ? 'pointer' : 'default',
-      }}
+      style={{ display:'inline-flex', alignItems:'center', gap:5, background:cfg.bg, color:cfg.color, fontSize:10, fontWeight:500, padding:'4px 10px', borderRadius:20, border:'none', cursor: canAdvance ? 'pointer' : 'default' }}
     >
       {cfg.label}
       {canAdvance && <ArrowRight size={9} />}
@@ -104,27 +89,23 @@ function StatusCell({
 
 function LostModal({ lead, onClose, onConfirm }: { lead: Lead; onClose: () => void; onConfirm: (id: string, reason: string) => void }) {
   const [reason, setReason] = useState('')
-
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={onClose}>
       <div style={{ background:'#FFFFFF', borderRadius:16, padding:'24px', width:360, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize:15, fontWeight:500, color:'#1C1C1E', marginBottom:4 }}>Mark as Lost</div>
-        <div style={{ fontSize:12, color:'#AEAEB2', marginBottom:18 }}>
-          {lead.caller_name || lead.caller_number} — {lead.incident_type || 'Unknown incident'}
-        </div>
+        <div style={{ fontSize:12, color:'#AEAEB2', marginBottom:18 }}>{lead.caller_name || lead.caller_number} — {lead.incident_type || 'Unknown incident'}</div>
         <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:20 }}>
           {LOST_REASONS.map(r => (
             <button key={r} onClick={() => setReason(r)}
-              style={{ textAlign:'left', padding:'10px 14px', borderRadius:10, border:`0.5px solid ${reason === r ? '#1C1C1E' : '#F0F0F0'}`, background: reason === r ? '#F8F8F8' : '#FFFFFF', fontSize:13, color: reason === r ? '#1C1C1E' : '#AEAEB2', cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif' }}>
+              style={{ textAlign:'left', padding:'10px 14px', borderRadius:10, border:`0.5px solid ${reason===r?'#1C1C1E':'#F0F0F0'}`, background:reason===r?'#F8F8F8':'#FFFFFF', fontSize:13, color:reason===r?'#1C1C1E':'#AEAEB2', cursor:'pointer', fontFamily:'Inter, system-ui, sans-serif' }}>
               {r}
             </button>
           ))}
         </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={onClose} style={{ flex:1, padding:'10px', borderRadius:10, border:'0.5px solid #F0F0F0', background:'#F8F8F8', fontSize:13, color:'#AEAEB2', cursor:'pointer' }}>Cancel</button>
-          <button onClick={() => { if (reason) { onConfirm(lead.id, reason); onClose() } }}
-            disabled={!reason}
-            style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background:'#1C1C1E', fontSize:13, color:'#FFFFFF', cursor: reason ? 'pointer' : 'not-allowed', opacity: reason ? 1 : 0.4 }}>
+          <button onClick={() => { if (reason) { onConfirm(lead.id, reason); onClose() } }} disabled={!reason}
+            style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background:'#1C1C1E', fontSize:13, color:'#FFFFFF', cursor:reason?'pointer':'not-allowed', opacity:reason?1:0.4 }}>
             Confirm
           </button>
         </div>
@@ -135,44 +116,25 @@ function LostModal({ lead, onClose, onConfirm }: { lead: Lead; onClose: () => vo
 
 function AddLeadModal({ clientId, onClose, onAdd }: { clientId: string; onClose: () => void; onAdd: () => void }) {
   const supabase = createClient()
-  const [form, setForm] = useState({ caller_number: '', caller_name: '', incident_type: '', lead_quality: 'strong' })
+  const [form, setForm] = useState({ caller_number:'', caller_name:'', incident_type:'', lead_quality:'strong' })
   const [saving, setSaving] = useState(false)
-
   const save = async () => {
     if (!form.caller_number) return
     setSaving(true)
-    await supabase.from('leads').insert({
-      client_id: clientId,
-      caller_number: form.caller_number,
-      caller_name: form.caller_name || null,
-      incident_type: form.incident_type || null,
-      lead_quality: form.lead_quality,
-      status: 'new',
-    })
-    setSaving(false)
-    onAdd()
-    onClose()
+    await supabase.from('leads').insert({ client_id:clientId, caller_number:form.caller_number, caller_name:form.caller_name||null, incident_type:form.incident_type||null, lead_quality:form.lead_quality, status:'new' })
+    setSaving(false); onAdd(); onClose()
   }
-
   const field: React.CSSProperties = { width:'100%', background:'#F8F8F8', border:'0.5px solid #F0F0F0', borderRadius:8, padding:'9px 12px', fontSize:13, color:'#1C1C1E', outline:'none', fontFamily:'Inter, system-ui, sans-serif', boxSizing:'border-box' }
   const labelStyle: React.CSSProperties = { fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:5, display:'block' }
-
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={onClose}>
       <div style={{ background:'#FFFFFF', borderRadius:16, padding:'24px', width:380, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize:15, fontWeight:500, color:'#1C1C1E', marginBottom:18 }}>Add Lead Manually</div>
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          <div>
-            <span style={labelStyle}>Phone Number *</span>
-            <input style={field} placeholder="+1 305 000 0000" value={form.caller_number} onChange={e => setForm(f => ({ ...f, caller_number: e.target.value }))} />
-          </div>
-          <div>
-            <span style={labelStyle}>Name (optional)</span>
-            <input style={field} placeholder="Caller's name" value={form.caller_name} onChange={e => setForm(f => ({ ...f, caller_name: e.target.value }))} />
-          </div>
-          <div>
-            <span style={labelStyle}>Incident Type</span>
-            <select style={field} value={form.incident_type} onChange={e => setForm(f => ({ ...f, incident_type: e.target.value }))}>
+          <div><span style={labelStyle}>Phone Number *</span><input style={field} placeholder="+1 305 000 0000" value={form.caller_number} onChange={e => setForm(f=>({...f,caller_number:e.target.value}))} /></div>
+          <div><span style={labelStyle}>Name (optional)</span><input style={field} placeholder="Caller's name" value={form.caller_name} onChange={e => setForm(f=>({...f,caller_name:e.target.value}))} /></div>
+          <div><span style={labelStyle}>Incident Type</span>
+            <select style={field} value={form.incident_type} onChange={e => setForm(f=>({...f,incident_type:e.target.value}))}>
               <option value="">Select type</option>
               <option value="Auto Accident">Auto Accident</option>
               <option value="Workplace Injury">Workplace Injury</option>
@@ -180,9 +142,8 @@ function AddLeadModal({ clientId, onClose, onAdd }: { clientId: string; onClose:
               <option value="Other">Other</option>
             </select>
           </div>
-          <div>
-            <span style={labelStyle}>Lead Quality</span>
-            <select style={field} value={form.lead_quality} onChange={e => setForm(f => ({ ...f, lead_quality: e.target.value }))}>
+          <div><span style={labelStyle}>Lead Quality</span>
+            <select style={field} value={form.lead_quality} onChange={e => setForm(f=>({...f,lead_quality:e.target.value}))}>
               <option value="strong">Strong</option>
               <option value="moderate">Moderate</option>
               <option value="weak">Weak</option>
@@ -191,9 +152,183 @@ function AddLeadModal({ clientId, onClose, onAdd }: { clientId: string; onClose:
         </div>
         <div style={{ display:'flex', gap:8, marginTop:20 }}>
           <button onClick={onClose} style={{ flex:1, padding:'10px', borderRadius:10, border:'0.5px solid #F0F0F0', background:'#F8F8F8', fontSize:13, color:'#AEAEB2', cursor:'pointer' }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background:'#1C1C1E', fontSize:13, color:'#FFFFFF', cursor:'pointer', opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Adding...' : 'Add Lead'}
-          </button>
+          <button onClick={save} disabled={saving} style={{ flex:1, padding:'10px', borderRadius:10, border:'none', background:'#1C1C1E', fontSize:13, color:'#FFFFFF', cursor:'pointer', opacity:saving?0.6:1 }}>{saving?'Adding...':'Add Lead'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AnalyticsView({ leads, avgCaseValue }: { leads: Lead[]; avgCaseValue: number }) {
+  const total = leads.length
+  const retained = leads.filter(l => l.status === 'retained')
+  const lost = leads.filter(l => l.status === 'lost')
+  const active = leads.filter(l => !['retained','lost'].includes(l.status))
+  const contacted = leads.filter(l => !['new'].includes(l.status))
+  const consultations = leads.filter(l => ['consultation_scheduled','retained'].includes(l.status))
+
+  const contactRate = total > 0 ? Math.round((contacted.length / total) * 100) : 0
+  const conversionRate = total > 0 ? Math.round((retained.length / total) * 100) : 0
+  const pipelineValue = active.length * avgCaseValue
+  const capturedValue = retained.length * avgCaseValue
+  const lostValue = lost.length * avgCaseValue
+
+  // Avg first response time
+  const responseTimes = leads
+    .filter(l => l.last_contacted_at)
+    .map(l => (new Date(l.last_contacted_at!).getTime() - new Date(l.created_at).getTime()) / (1000 * 60 * 60))
+  const avgResponseHours = responseTimes.length > 0
+    ? Math.round((responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length) * 10) / 10
+    : 0
+  const fastestHours = responseTimes.length > 0 ? Math.min(...responseTimes) : 0
+  const slowestHours = responseTimes.length > 0 ? Math.max(...responseTimes) : 0
+
+  const avgAttempts = leads.filter(l => l.contact_attempts > 0).length > 0
+    ? Math.round((leads.reduce((a,l) => a + (l.contact_attempts||0), 0) / leads.filter(l => l.contact_attempts > 0).length) * 10) / 10
+    : 0
+
+  const lostReasonCounts: Record<string, number> = {}
+  lost.forEach(l => { if (l.lost_reason) lostReasonCounts[l.lost_reason] = (lostReasonCounts[l.lost_reason] || 0) + 1 })
+  const sortedLostReasons = Object.entries(lostReasonCounts).sort((a,b) => b[1]-a[1])
+  const maxLostCount = sortedLostReasons[0]?.[1] || 1
+
+  const fmtHours = (h: number) => h < 1 ? `${Math.round(h*60)}m` : `${Math.round(h*10)/10}h`
+  const fmtVal = (v: number) => v >= 1000000 ? `$${Math.round(v/100000)/10}M` : v >= 1000 ? `$${Math.round(v/1000)}k` : `$${v}`
+
+  const card: React.CSSProperties = { background:'#F8F8F8', borderRadius:14, padding:'16px 16px 14px' }
+  const panel: React.CSSProperties = { background:'#F8F8F8', borderRadius:14, padding:16 }
+  const ptitle: React.CSSProperties = { fontSize:10, fontWeight:500, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:14 }
+
+  return (
+    <div>
+      {/* Top metrics */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
+        <div style={card}>
+          <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em', display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:'#1C1C1E', display:'inline-block' }}></span>
+            Contact Rate
+          </div>
+          <div style={{ fontSize:32, fontWeight:300, color:'#1C1C1E', lineHeight:1, letterSpacing:'-0.03em', marginBottom:4 }}>{contactRate}%</div>
+          <div style={{ fontSize:10, color:'#AEAEB2' }}>of leads followed up</div>
+        </div>
+        <div style={card}>
+          <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em', display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:'#1C1C1E', display:'inline-block' }}></span>
+            Avg Response Time
+          </div>
+          <div style={{ fontSize:32, fontWeight:300, color:'#1C1C1E', lineHeight:1, letterSpacing:'-0.03em', marginBottom:4 }}>{avgResponseHours > 0 ? fmtHours(avgResponseHours) : '—'}</div>
+          <div style={{ fontSize:10, color:'#AEAEB2' }}>first contact attempt</div>
+        </div>
+        <div style={card}>
+          <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em', display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:'#30D158', display:'inline-block' }}></span>
+            Conversion Rate
+          </div>
+          <div style={{ fontSize:32, fontWeight:300, color:'#30D158', lineHeight:1, letterSpacing:'-0.03em', marginBottom:4 }}>{conversionRate}%</div>
+          <div style={{ fontSize:10, color:'#AEAEB2' }}>leads → retained</div>
+        </div>
+        <div style={card}>
+          <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em', display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:5, height:5, borderRadius:'50%', background:'#0A84FF', display:'inline-block' }}></span>
+            Pipeline Value
+          </div>
+          <div style={{ fontSize:32, fontWeight:300, color:'#0A84FF', lineHeight:1, letterSpacing:'-0.03em', marginBottom:4 }}>{fmtVal(pipelineValue)}</div>
+          <div style={{ fontSize:10, color:'#AEAEB2' }}>{active.length} active leads</div>
+        </div>
+      </div>
+
+      {/* Middle row */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+        {/* Funnel */}
+        <div style={panel}>
+          <div style={ptitle}>Conversion Funnel</div>
+          {[
+            { label:'Leads received', count:total, pct:null, color:'#1C1C1E' },
+            { label:'Contacted', count:contacted.length, pct: total>0?Math.round((contacted.length/total)*100):0, color:'#1C1C1E' },
+            { label:'Consultation scheduled', count:consultations.length, pct: total>0?Math.round((consultations.length/total)*100):0, color:'#1C1C1E' },
+            { label:'Retained', count:retained.length, pct: total>0?Math.round((retained.length/total)*100):0, color:'#30D158' },
+            { label:'Lost', count:lost.length, pct: total>0?Math.round((lost.length/total)*100):0, color:'#FF453A' },
+          ].map(({ label, count, pct, color }) => (
+            <div key={label} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:9 }}>
+              <div style={{ fontSize:11, color:'#1C1C1E', width:160, flexShrink:0 }}>{label}</div>
+              <div style={{ flex:1, background:'#EFEFEF', borderRadius:3, height:4, overflow:'hidden' }}>
+                <div style={{ height:4, borderRadius:3, background: color, opacity: color==='#FF453A'?0.5:1, width: total>0?`${Math.round((count/total)*100)}%`:'0%', transition:'width 0.3s' }}></div>
+              </div>
+              <div style={{ fontSize:11, color:'#AEAEB2', fontFamily:'monospace', width:20, textAlign:'right' }}>{count}</div>
+              <div style={{ fontSize:10, width:34, textAlign:'right', color: pct!==null ? color : '#AEAEB2' }}>{pct !== null ? `${pct}%` : ''}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Response time */}
+        <div style={panel}>
+          <div style={ptitle}>Response Time</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+            <div style={card}>
+              <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>Avg first response</div>
+              <div style={{ fontSize:24, fontWeight:300, color:'#1C1C1E', letterSpacing:'-0.02em', marginBottom:3 }}>{avgResponseHours > 0 ? fmtHours(avgResponseHours) : '—'}</div>
+              <div style={{ fontSize:10, color:'#AEAEB2' }}>target: under 1hr</div>
+            </div>
+            <div style={card}>
+              <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>Avg attempts</div>
+              <div style={{ fontSize:24, fontWeight:300, color:'#1C1C1E', letterSpacing:'-0.02em', marginBottom:3 }}>{avgAttempts > 0 ? `${avgAttempts}x` : '—'}</div>
+              <div style={{ fontSize:10, color:'#AEAEB2' }}>before contact</div>
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+            <div style={{ flex:1, background:'#FFFFFF', borderRadius:8, padding:'9px 10px', border:'0.5px solid #F0F0F0' }}>
+              <div style={{ fontSize:13, fontWeight:500, color:'#30D158', marginBottom:2 }}>{fastestHours > 0 ? fmtHours(fastestHours) : '—'}</div>
+              <div style={{ fontSize:10, color:'#AEAEB2' }}>Fastest this month</div>
+            </div>
+            <div style={{ flex:1, background:'#FFFFFF', borderRadius:8, padding:'9px 10px', border:'0.5px solid #F0F0F0' }}>
+              <div style={{ fontSize:13, fontWeight:500, color:'#FF453A', marginBottom:2 }}>{slowestHours > 0 ? fmtHours(slowestHours) : '—'}</div>
+              <div style={{ fontSize:10, color:'#AEAEB2' }}>Slowest this month</div>
+            </div>
+          </div>
+          <div style={{ fontSize:11, color:'#AEAEB2', lineHeight:1.6 }}>
+            Firms that respond within <span style={{ color:'#1C1C1E', fontWeight:500 }}>1 hour</span> convert up to <span style={{ color:'#1C1C1E', fontWeight:500 }}>3× more leads.</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom row */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+        {/* Lost reasons */}
+        <div style={panel}>
+          <div style={ptitle}>Lost Lead Reasons</div>
+          {sortedLostReasons.length === 0 ? (
+            <div style={{ fontSize:12, color:'#AEAEB2' }}>No lost leads yet.</div>
+          ) : sortedLostReasons.map(([reason, count]) => (
+            <div key={reason} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+              <div style={{ fontSize:11, color:'#1C1C1E', flex:1 }}>{reason}</div>
+              <div style={{ width:80, background:'#EFEFEF', borderRadius:3, height:4, flexShrink:0 }}>
+                <div style={{ height:4, borderRadius:3, background:'#1C1C1E', opacity:0.25, width:`${Math.round((count/maxLostCount)*100)}%` }}></div>
+              </div>
+              <div style={{ fontSize:11, color:'#AEAEB2', fontFamily:'monospace', width:16, textAlign:'right' }}>{count}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Revenue impact */}
+        <div style={panel}>
+          <div style={ptitle}>Revenue Impact</div>
+          <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+            <div style={{ flex:1, background:'#FFFFFF', borderRadius:10, padding:'12px 14px', border:'0.5px solid #F0F0F0' }}>
+              <div style={{ fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>Captured</div>
+              <div style={{ fontSize:22, fontWeight:300, color:'#30D158', letterSpacing:'-0.02em', marginBottom:3 }}>{fmtVal(capturedValue)}</div>
+              <div style={{ fontSize:10, color:'#AEAEB2' }}>{retained.length} clients × {fmtVal(avgCaseValue)} avg</div>
+            </div>
+            <div style={{ flex:1, background:'#FFFFFF', borderRadius:10, padding:'12px 14px', border:'0.5px solid #F0F0F0' }}>
+              <div style={{ fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>Lost</div>
+              <div style={{ fontSize:22, fontWeight:300, color:'#FF453A', letterSpacing:'-0.02em', marginBottom:3 }}>{fmtVal(lostValue)}</div>
+              <div style={{ fontSize:10, color:'#AEAEB2' }}>{lost.length} leads × {fmtVal(avgCaseValue)} avg</div>
+            </div>
+          </div>
+          <div style={{ background:'#FFFFFF', borderRadius:8, padding:'10px 12px', border:'0.5px solid #F0F0F0' }}>
+            <div style={{ fontSize:10, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:4 }}>Active pipeline</div>
+            <div style={{ fontSize:20, fontWeight:300, color:'#0A84FF', letterSpacing:'-0.02em', marginBottom:3 }}>{fmtVal(pipelineValue)}</div>
+            <div style={{ fontSize:10, color:'#AEAEB2' }}>{active.length} active leads × {fmtVal(avgCaseValue)} avg case value</div>
+          </div>
         </div>
       </div>
     </div>
@@ -204,10 +339,12 @@ export default function PipelinePage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [clientId, setClientId] = useState<string | null>(null)
   const [clientName, setClientName] = useState('Your Business')
+  const [avgCaseValue, setAvgCaseValue] = useState(15000)
   const [ready, setReady] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [lostModalLead, setLostModalLead] = useState<Lead | null>(null)
   const [filter, setFilter] = useState<string>('active')
+  const [view, setView] = useState<'pipeline' | 'analytics'>('pipeline')
   const [isMobile, setIsMobile] = useState(false)
   const supabase = createClient()
 
@@ -226,8 +363,9 @@ export default function PipelinePage() {
       if (profile?.role === 'admin') { window.location.href = '/admin/clients'; return }
       if (profile?.client_id) {
         setClientId(profile.client_id)
-        const { data: client } = await supabase.from('clients').select('name').eq('id', profile.client_id).single()
+        const { data: client } = await supabase.from('clients').select('name, avg_case_value').eq('id', profile.client_id).single()
         if (client?.name) setClientName(client.name)
+        if (client?.avg_case_value) setAvgCaseValue(client.avg_case_value)
         const { data: leadsData } = await supabase
           .from('leads')
           .select('*')
@@ -299,130 +437,135 @@ export default function PipelinePage() {
               <p style={{ fontSize:12, color:'#AEAEB2' }}>Every qualified lead from Sara, tracked from first call to retained client.</p>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              {needsFollowUp.length > 0 && (
+              {needsFollowUp.length > 0 && view === 'pipeline' && (
                 <div style={{ display:'flex', alignItems:'center', gap:6, background:'#FFF5F5', color:'#FF453A', fontSize:11, fontWeight:500, padding:'6px 12px', borderRadius:20 }}>
                   <AlertCircle size={11} />
                   {needsFollowUp.length} lead{needsFollowUp.length > 1 ? 's' : ''} need follow-up
                 </div>
               )}
-              <button onClick={() => setShowAddModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'#1C1C1E', color:'#FFFFFF', fontSize:12, fontWeight:500, padding:'8px 14px', borderRadius:10, border:'none', cursor:'pointer' }}>
-                <Plus size={13} />
-                Add Lead
-              </button>
+              {view === 'pipeline' && (
+                <button onClick={() => setShowAddModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'#1C1C1E', color:'#FFFFFF', fontSize:12, fontWeight:500, padding:'8px 14px', borderRadius:10, border:'none', cursor:'pointer' }}>
+                  <Plus size={13} />
+                  Add Lead
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Metrics */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
-            {[
-              { label:'New Leads',       val: newLeads.length,      sub:'need follow-up' },
-              { label:'Active Pipeline', val: activeLeads.length,   sub:'in progress' },
-              { label:'Retained',        val: retainedLeads.length, sub:'this month' },
-              { label:'Lost',            val: lostLeads.length,     sub: leads.length ? Math.round((lostLeads.length/leads.length)*100)+'% loss rate' : '0% loss rate' },
-            ].map(({ label, val, sub }) => (
-              <div key={label} style={card}>
-                <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
-                <div style={{ fontSize:32, fontWeight:300, color:'#1C1C1E', lineHeight:1, letterSpacing:'-0.03em', marginBottom:4 }}>{val}</div>
-                <div style={{ fontSize:10, color:'#AEAEB2' }}>{sub}</div>
-              </div>
-            ))}
-          </div>
+          {/* Metrics — pipeline view only */}
+          {view === 'pipeline' && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
+              {[
+                { label:'New Leads',       val: newLeads.length,      sub:'need follow-up' },
+                { label:'Active Pipeline', val: activeLeads.length,   sub:'in progress' },
+                { label:'Retained',        val: retainedLeads.length, sub:'this month' },
+                { label:'Lost',            val: lostLeads.length,     sub: leads.length ? Math.round((lostLeads.length/leads.length)*100)+'% loss rate' : '0% loss rate' },
+              ].map(({ label, val, sub }) => (
+                <div key={label} style={card}>
+                  <div style={{ fontSize:10, color:'#AEAEB2', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
+                  <div style={{ fontSize:32, fontWeight:300, color:'#1C1C1E', lineHeight:1, letterSpacing:'-0.03em', marginBottom:4 }}>{val}</div>
+                  <div style={{ fontSize:10, color:'#AEAEB2' }}>{sub}</div>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Filter tabs */}
+          {/* Tabs */}
           <div style={{ display:'flex', gap:4, marginBottom:16 }}>
-            {[
-              { key:'active',   label:'Active' },
+            {view === 'pipeline' && [
+              { key:'active', label:'Active' },
               { key:'retained', label:'Retained' },
-              { key:'lost',     label:'Lost' },
-              { key:'all',      label:'All' },
+              { key:'lost', label:'Lost' },
+              { key:'all', label:'All' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)}
-                style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight: filter===key ? 500 : 400, color: filter===key ? '#1C1C1E' : '#AEAEB2', background: filter===key ? '#F8F8F8' : 'transparent', border: filter===key ? '0.5px solid #E5E5E5' : '0.5px solid transparent', cursor:'pointer' }}>
+                style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:filter===key?500:400, color:filter===key?'#1C1C1E':'#AEAEB2', background:filter===key?'#F8F8F8':'transparent', border:filter===key?'0.5px solid #E5E5E5':'0.5px solid transparent', cursor:'pointer' }}>
                 {label}
               </button>
             ))}
+            <div style={{ flex:1 }} />
+            <button onClick={() => setView(view === 'pipeline' ? 'analytics' : 'pipeline')}
+              style={{ padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:view==='analytics'?500:400, color:view==='analytics'?'#1C1C1E':'#AEAEB2', background:view==='analytics'?'#F8F8F8':'transparent', border:view==='analytics'?'0.5px solid #E5E5E5':'0.5px solid transparent', cursor:'pointer' }}>
+              Analytics
+            </button>
           </div>
 
-          {/* Table */}
-          <div style={{ background:'#F8F8F8', borderRadius:14, overflow:'visible' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom:'0.5px solid #EFEFEF' }}>
-                  {['Caller','Incident','Quality','Status','Attempts','Received',''].map(h => (
-                    <th key={h} style={{ fontSize:10, fontWeight:500, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', textAlign:'left', padding:'10px 14px' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedLeads.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign:'center', padding:'60px 20px', color:'#AEAEB2', fontSize:13 }}>
-                    <Phone size={22} style={{ margin:'0 auto 12px', display:'block', color:'#E5E5E5' }} />
-                    No leads yet. Sara will populate this automatically as calls come in.
-                  </td></tr>
-                ) : sortedLeads.map(lead => (
-                  <tr key={lead.id}
-                    style={{ borderBottom:'0.5px solid #EFEFEF' }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.background = '#FAFAFA'
-                      const btn = (e.currentTarget as HTMLElement).querySelector('.lost-btn') as HTMLElement
-                      if (btn) btn.style.opacity = '1'
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.background = 'transparent'
-                      const btn = (e.currentTarget as HTMLElement).querySelector('.lost-btn') as HTMLElement
-                      if (btn) btn.style.opacity = '0'
-                    }}>
-                    <td style={{ padding:'13px 14px' }}>
-                      <div style={{ fontSize:12, fontWeight:500, color:'#1C1C1E', fontFamily:'monospace' }}>{lead.caller_name || lead.caller_number}</div>
-                      {lead.caller_name && <div style={{ fontSize:10, color:'#AEAEB2', marginTop:2, fontFamily:'monospace' }}>{lead.caller_number}</div>}
-                    </td>
-                    <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2' }}>{lead.incident_type || '—'}</td>
-                    <td style={{ padding:'13px 14px' }}>
-                      <span style={{ fontSize:11, fontWeight:500, color: QUALITY_CONFIG[lead.lead_quality]?.color || '#AEAEB2' }}>
-                        {QUALITY_CONFIG[lead.lead_quality]?.label || lead.lead_quality}
-                      </span>
-                    </td>
-                    <td style={{ padding:'13px 14px' }}>
-                      <StatusCell
-                        lead={lead}
-                        onAdvance={advanceStatus}
-                        isMobile={isMobile}
-                      />
-                    </td>
-                    <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2', fontFamily:'monospace' }}>
-                      {lead.contact_attempts > 0 ? `${lead.contact_attempts}x` : '—'}
-                    </td>
-                    <td style={{ padding:'13px 14px' }}>
-                      <div style={{ fontSize:11, color:'#AEAEB2' }}>{format(new Date(lead.created_at), 'MMM d, hh:mm a')}</div>
-                      <div style={{ marginTop:4 }}>
-                        <UrgencyTimer
-                          createdAt={lead.created_at}
-                          status={lead.status}
-                          lastContactedAt={lead.last_contacted_at}
-                        />
-                      </div>
-                      {lead.status === 'lost' && lead.lost_reason && (
-                        <div style={{ fontSize:10, color:'#AEAEB2', marginTop:4 }}>{lead.lost_reason}</div>
-                      )}
-                    </td>
-                    <td style={{ padding:'13px 14px', textAlign:'right' }}>
-                      {!['retained','lost'].includes(lead.status) && (
-                        <button
-                          className="lost-btn"
-                          onClick={e => { e.stopPropagation(); setLostModalLead(lead) }}
-                          style={{ opacity: isMobile ? 1 : 0, transition:'opacity 0.15s', display:'inline-flex', alignItems:'center', gap:4, background:'none', border:'0.5px solid #E5E5E5', borderRadius:20, padding:'3px 10px', fontSize:10, color:'#AEAEB2', cursor:'pointer' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#FF453A'; (e.currentTarget as HTMLElement).style.borderColor='#FF453A' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#AEAEB2'; (e.currentTarget as HTMLElement).style.borderColor='#E5E5E5' }}
-                        >
-                          <X size={9} /> Lost
-                        </button>
-                      )}
-                    </td>
+          {/* Content */}
+          {view === 'analytics' ? (
+            <AnalyticsView leads={leads} avgCaseValue={avgCaseValue} />
+          ) : (
+            <div style={{ background:'#F8F8F8', borderRadius:14, overflow:'visible' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom:'0.5px solid #EFEFEF' }}>
+                    {['Caller','Incident','Quality','Status','Attempts','Received',''].map(h => (
+                      <th key={h} style={{ fontSize:10, fontWeight:500, color:'#AEAEB2', textTransform:'uppercase', letterSpacing:'0.06em', textAlign:'left', padding:'10px 14px' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {sortedLeads.length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign:'center', padding:'60px 20px', color:'#AEAEB2', fontSize:13 }}>
+                      <Phone size={22} style={{ margin:'0 auto 12px', display:'block', color:'#E5E5E5' }} />
+                      No leads yet. Sara will populate this automatically as calls come in.
+                    </td></tr>
+                  ) : sortedLeads.map(lead => (
+                    <tr key={lead.id}
+                      style={{ borderBottom:'0.5px solid #EFEFEF' }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.background = '#FAFAFA'
+                        const btn = (e.currentTarget as HTMLElement).querySelector('.lost-btn') as HTMLElement
+                        if (btn) btn.style.opacity = '1'
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.background = 'transparent'
+                        const btn = (e.currentTarget as HTMLElement).querySelector('.lost-btn') as HTMLElement
+                        if (btn) btn.style.opacity = '0'
+                      }}>
+                      <td style={{ padding:'13px 14px' }}>
+                        <div style={{ fontSize:12, fontWeight:500, color:'#1C1C1E', fontFamily:'monospace' }}>{lead.caller_name || lead.caller_number}</div>
+                        {lead.caller_name && <div style={{ fontSize:10, color:'#AEAEB2', marginTop:2, fontFamily:'monospace' }}>{lead.caller_number}</div>}
+                      </td>
+                      <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2' }}>{lead.incident_type || '—'}</td>
+                      <td style={{ padding:'13px 14px' }}>
+                        <span style={{ fontSize:11, fontWeight:500, color: QUALITY_CONFIG[lead.lead_quality]?.color || '#AEAEB2' }}>
+                          {QUALITY_CONFIG[lead.lead_quality]?.label || lead.lead_quality}
+                        </span>
+                      </td>
+                      <td style={{ padding:'13px 14px' }}>
+                        <StatusCell lead={lead} onAdvance={advanceStatus} isMobile={isMobile} />
+                      </td>
+                      <td style={{ padding:'13px 14px', fontSize:11, color:'#AEAEB2', fontFamily:'monospace' }}>
+                        {lead.contact_attempts > 0 ? `${lead.contact_attempts}x` : '—'}
+                      </td>
+                      <td style={{ padding:'13px 14px' }}>
+                        <div style={{ fontSize:11, color:'#AEAEB2' }}>{format(new Date(lead.created_at), 'MMM d, hh:mm a')}</div>
+                        <div style={{ marginTop:4 }}>
+                          <UrgencyTimer createdAt={lead.created_at} status={lead.status} lastContactedAt={lead.last_contacted_at} />
+                        </div>
+                        {lead.status === 'lost' && lead.lost_reason && (
+                          <div style={{ fontSize:10, color:'#AEAEB2', marginTop:4 }}>{lead.lost_reason}</div>
+                        )}
+                      </td>
+                      <td style={{ padding:'13px 14px', textAlign:'right' }}>
+                        {!['retained','lost'].includes(lead.status) && (
+                          <button
+                            className="lost-btn"
+                            onClick={e => { e.stopPropagation(); setLostModalLead(lead) }}
+                            style={{ opacity:isMobile?1:0, transition:'opacity 0.15s', display:'inline-flex', alignItems:'center', gap:4, background:'none', border:'0.5px solid #E5E5E5', borderRadius:20, padding:'3px 10px', fontSize:10, color:'#AEAEB2', cursor:'pointer' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color='#FF453A'; (e.currentTarget as HTMLElement).style.borderColor='#FF453A' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color='#AEAEB2'; (e.currentTarget as HTMLElement).style.borderColor='#E5E5E5' }}
+                          >
+                            <X size={9} /> Lost
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
         </div>
       </main>
