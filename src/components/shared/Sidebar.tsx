@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { LayoutDashboard, BarChart2, Phone, Bot, CreditCard, Settings, Users, LogOut } from 'lucide-react'
+import { LayoutDashboard, BarChart2, Phone, Bot, CreditCard, Settings, Users, LogOut, Target } from 'lucide-react'
 
 interface SidebarProps { role: 'admin' | 'client'; clientName?: string }
 
@@ -12,6 +12,7 @@ const adminLinks = [
   { href:'/admin/settings',  icon:Settings,        label:'Settings' },
 ]
 const clientLinks = [
+  { href:'/dashboard/pipeline', icon:Target,          label:'Pipeline' },
   { href:'/dashboard/overview', icon:LayoutDashboard, label:'Overview' },
   { href:'/dashboard/analytics',icon:BarChart2,       label:'Analytics' },
   { href:'/dashboard/calls',    icon:Phone,           label:'Call Logs' },
